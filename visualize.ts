@@ -1,6 +1,7 @@
 ﻿
-const WIDTH = 500;  
+const WIDTH = 500;
 const HEIGHT = 500;
+const K = WIDTH / 2 / 5;
 
 function drawArrow(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number) {
     ctx.save();
@@ -24,7 +25,6 @@ function drawArrow(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: nu
 
 function draw(canvas: HTMLCanvasElement, history: Complex[][]) {
     console.log(history.length);
-    let k = WIDTH / 2 / 5;
     let n = history.length;
     let d = history[0].length;
     let ctx = canvas.getContext("2d");
@@ -43,13 +43,13 @@ function draw(canvas: HTMLCanvasElement, history: Complex[][]) {
         for (let j = 0; j < n; j++) {
             ctx.beginPath();
             let r = (j == 0 || j == n - 1) ? 3 : 1;
-            ctx.arc(history[j][i].x * k, - history[j][i].y * k, r, 0, 2 * Math.PI);
+            ctx.arc(history[j][i].x * K, - history[j][i].y * K, r, 0, 2 * Math.PI);
             if (j == 0) ctx.fillStyle = "blue";
             else if (j == n - 1) ctx.fillStyle = "red";
             else ctx.fillStyle = "black";
             ctx.fill();
             if (j > 0) {
-                drawArrow(ctx, history[j - 1][i].x * k, - history[j - 1][i].y * k, history[j][i].x * k, - history[j][i].y * k);
+                drawArrow(ctx, history[j - 1][i].x * K, - history[j - 1][i].y * K, history[j][i].x * K, - history[j][i].y * K);
             }
         }
     }
@@ -70,11 +70,8 @@ window.onload = () => {
     canvas.height = HEIGHT;
     let container = document.getElementById("content");
     container.appendChild(canvas);
-
-    //let poly = [c(1, 0), c(0, -2), c(2, 7), c(3, -11)];
-
-    // x(x+1)(x+2)(x+3)(x+4)
-    let poly = [c(1, 0), c(10, 0), c(35, 0), c(50, 0), c(24, 0), c(0, 0)];
+    
+    let poly = zsToPoly([c(0, 0), c(1, 0), c(-1, 0), c(2, 0), c(-2, 0)]).coef;
     let history = durandkerner(poly);
     draw(canvas, history);
 
@@ -82,9 +79,49 @@ window.onload = () => {
 
     function random() {
         let degree = Number((<HTMLInputElement>document.getElementById("degree")).value);
-        let poly = randomPoly(degree);
-        let history = durandkerner(poly);
+        poly = randomPoly(degree);
+        history = durandkerner(poly);
         draw(canvas, history);
         document.getElementById("random").addEventListener("click", random);
+    }
+
+    let startX: number
+    let startY: number;
+    let dragging: number = null;
+    let initialZ: Complex = null;
+    let zs: Complex[] = null;
+
+    canvas.addEventListener("mousedown", function (e) {
+        e.preventDefault();
+        startX = e.clientX - canvas.offsetLeft;
+        startY = e.clientY - canvas.offsetTop;
+        zs = history[history.length - 1].slice();
+        for (let i = 0; i < zs.length; i++) {
+            let x = WIDTH / 2 + zs[i].x * K;
+            let y = HEIGHT / 2 - zs[i].y * K;
+            let dx = x - startX;
+            let dy = y - startY;
+            if (dx * dx + dy * dy < 4 * 4) {
+                dragging = i;
+                initialZ = zs[i];
+            } 
+        }
+    });
+    document.body.addEventListener("mousemove", function (e) {
+        if (dragging != null) {
+            move(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
+        }
+    });
+    document.body.addEventListener("mouseup", function (e) {
+        e.preventDefault();
+        dragging = null;
+    });
+
+    function move(x: number, y: number) {
+        x -= startX, y -= startY;
+        zs[dragging] = initialZ.add(c(x / K, - y / K));
+        let poly = zsToPoly(zs);
+        history = durandkerner(poly.coef);
+        draw(canvas, history);
     }
 };

@@ -43,6 +43,10 @@
         return this.mul(other.inv());
     }
 
+    toString() {
+        return this.x + "+i(" + this.y+")";
+    }
+
     iszero() {
         return this.x == 0 && this.y == 0;
     }
@@ -122,7 +126,7 @@ function aberth(poly: Complex[]) {
 }
 
 function durandkerner(poly: Complex []) {
-    const maxcount = 5000;
+    const maxcount = 500;
     const tol = 1.0e-12;
     let p = poly.map((a) => { return a.div(poly[0]); });
     let deg = poly.length - 1;
